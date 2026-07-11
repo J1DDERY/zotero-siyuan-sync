@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "Zotero SiYuan Sync",
+  "version": "1.0.0",
+  "description": "一键发送论文到 SiYuan 精读笔记（含 DeepSeek AI 分析）",
+  "author": "EMC Research",
+  "homepage_url": "https://github.com/emc-research/zotero-siyuan-sync",
+  "icons": {
+    "48": "chrome/content/icons/favicon@0.5x.png",
+    "96": "chrome/content/icons/favicon.png"
+  },
+  "applications": {
+    "zotero": {
+      "id": "zotero-siyuan-sync@emc-research",
+      "update_url": "https://raw.githubusercontent.com/emc-research/zotero-siyuan-sync/main/updates.json",
+      "strict_min_version": "9.0.3",
+      "strict_max_version": "10.*.*"
+    }
+  }
+}
