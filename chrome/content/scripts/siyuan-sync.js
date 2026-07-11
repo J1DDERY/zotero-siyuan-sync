@@ -131,7 +131,7 @@ Object.assign(Zotero.SiYuanSync, {
 
   // 获取或选择笔记本目录
   async getDir() {
-    var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir", true);
+    var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
     if (dir) return dir;
 
     var labels = this.DIRECTORIES.map(d => d[1]);
