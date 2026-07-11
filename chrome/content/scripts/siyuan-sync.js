@@ -127,27 +127,22 @@ Object.assign(Zotero.SiYuanSync, {
 
   // 获取或选择笔记本目录
   async getDir() {
-    // 先从 prefs 读取上次的选择
     var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir", true);
     if (dir) return dir;
 
-    // 弹出选择对话框
     var labels = this.DIRECTORIES.map(d => d[1]);
-    var idx = await new Promise(resolve => {
-      Services.prompt.select(
-        null,
-        "选择目标笔记本",
-        "导入到哪个子方向？",
-        labels,
-        labels.length,
-        resolve
-      );
-    });
-
-    if (idx < 0 || idx >= this.DIRECTORIES.length) return null;
-    dir = this.DIRECTORIES[idx][0];
+    var idx = { value: 0 };
+    var ok = Services.prompt.select(
+      null,
+      "选择目标笔记本",
+      "导入到哪个子方向？",
+      labels,
+      idx
+    );
+    if (!ok || idx.value < 0 || idx.value >= this.DIRECTORIES.length) return null;
+    dir = this.DIRECTORIES[idx.value][0];
     Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir, true);
-    Zotero.log("SiYuanSync: 选择目录: " + dir + " (" + this.DIRECTORIES[idx][1] + ")");
+    Zotero.log("SiYuanSync: 选择目录: " + dir + " (" + this.DIRECTORIES[idx.value][1] + ")");
     return dir;
   },
 
