@@ -128,7 +128,7 @@ Object.assign(Zotero.SiYuanSync, {
         authors: [],
         journal: item.getField("publicationTitle"),
         date: item.getField("date"),
-        url: item.getField("url"),
+        url: "https://zotero.org/users/local/" + item.libraryID + "/items/" + item.key,
         key: item.key,
       };
       try {
