@@ -1,10 +1,10 @@
 {
   "addons": {
-    "zotero-siyuan-sync@emc-research": {
+    "zotero-siyuan-sync@J1DDERY": {
       "updates": [
         {
           "version": "1.0.0",
-          "update_link": "https://github.com/emc-research/zotero-siyuan-sync/releases/download/v1.0.0/zotero-siyuan-sync.xpi"
+          "update_link": "https://github.com/J1DDERY/zotero-siyuan-sync/releases/download/v1.0.0/zotero-siyuan-sync.xpi"
         }
       ]
     }

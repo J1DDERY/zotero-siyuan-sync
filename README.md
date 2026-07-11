@@ -22,7 +22,7 @@
 
 ### 方法一：从 Release 安装（推荐）
 
-1. 前往 [Releases](https://github.com/emc-research/zotero-siyuan-sync/releases) 下载最新 `.xpi`
+1. 前往 [Releases](https://github.com/J1DDERY/zotero-siyuan-sync/releases) 下载最新 `.xpi`
 2. Zotero → 工具 → 插件 → ⚙ → **Install Add-on From File...**
 3. 选择下载的 `.xpi` 文件
 4. 重启 Zotero
@@ -30,7 +30,7 @@
 ### 方法二：自行构建
 
 ```bash
-git clone https://github.com/emc-research/zotero-siyuan-sync.git
+git clone https://github.com/J1DDERY/zotero-siyuan-sync.git
 cd zotero-siyuan-sync
 python build_xpi.py
 # 生成的 XPI 位于桌面
@@ -144,7 +144,7 @@ git log --oneline --graph
 
 ```bash
 echo "D:\0_DAT\SiYuan\scripts\zotero-plugin" > \
-  "C:\Users\...\extensions\zotero-siyuan-sync@emc-research"
+  "C:\Users\...\extensions\zotero-siyuan-sync@J1DDERY"
 ```
 
 2. 删除 `extensions.json` 中该插件条目
