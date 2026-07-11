@@ -120,6 +120,12 @@ Object.assign(Zotero.SiYuanSync, {
     }
 
     try {
+      // 显示进度提示
+      var pw = new Zotero.ProgressWindow({closeOnClick:true});
+      pw.changeHeadline("📖 正在导入到 SiYuan");
+      var desc = pw.addDescription("DeepSeek AI 分析中（约 20 秒）...");
+      pw.show();
+
       var item = items[0];
       var meta = {
         doi: item.getField("DOI"),
