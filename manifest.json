@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Zotero SiYuan Sync",
-  "version": "1.0.1",
-  "description": "一键发送论文到 SiYuan 精读笔记（含 DeepSeek AI 分析）",
+  "version": "1.1.0",
+  "description": "\u4e00\u952e\u53d1\u9001\u8bba\u6587\u5230 SiYuan \u7cbe\u8bfb\u7b14\u8bb0\uff08\u542b DeepSeek AI \u5206\u6790\uff09",
   "author": "EMC Research",
   "homepage_url": "https://github.com/J1DDERY/zotero-siyuan-sync",
   "icons": {
