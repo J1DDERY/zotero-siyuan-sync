@@ -68,42 +68,24 @@ def llm_analyze(title,abstract,authors,journal):
         return {k:f"（LLM 分析失败: {e}）" for k in ["研究动机/背景","核心内容","局限与展望"]}
 
 def find_notebook(subdir_hint=""):
-    """查找 SiYuan 笔记本"""
-    NOTEBOOK_MAP={
-        "E1":"[E] 电磁干扰与电磁兼容","E2":"[E] 电磁干扰与电磁兼容","E3":"[E] 电磁干扰与电磁兼容",
-        "E4":"[E] 电磁干扰与电磁兼容","E5":"[E] 电磁干扰与电磁兼容",
-        "M1":"[M] 电磁测量与传感","M2":"[M] 电磁测量与传感","M3":"[M] 电磁测量与传感",
-        "M4":"[M] 电磁测量与传感","M5":"[M] 电磁测量与传感",
-        "P1":"[P] 电力电子与电能质量","P2":"[P] 电力电子与电能质量","P3":"[P] 电力电子与电能质量",
-        "P4":"[P] 电力电子与电能质量","P5":"[P] 电力电子与电能质量",
-        "L1":"[L] 脉冲功率与等离子体","L2":"[L] 脉冲功率与等离子体",
-        "A1":"[A] 天线与传播","A2":"[A] 天线与传播",
-        "C1":"[C] 电路与系统","C2":"[C] 电路与系统",
-        "S1":"[S] 信号处理与成像",
-        "H1":"[H] 高电压与绝缘",
-    }
+    """查找 SiYuan 笔记本（不依赖硬编码映射，模糊匹配用户输入）"""
     ret=req({},"/api/notebook/lsNotebooks")
     notebooks=ret["data"]["notebooks"]
 
-    # 优先按 --dir 提示匹配
+    # 1. 精确匹配
     if subdir_hint:
-        long=NOTEBOOK_MAP.get(subdir_hint,"")
-        if long:
-            for nb in notebooks:
-                if nb["name"]==long:
-                    return nb["id"], subdir_hint
-        # fallback: 模糊匹配
         for nb in notebooks:
-            if subdir_hint in nb["name"]:
+            if subdir_hint.lower() in nb["name"].lower():
                 return nb["id"], subdir_hint
 
-    # fallback: 找包含 缓冲区 的
+    # 2. fallback: 找包含 缓冲区 的
     for nb in notebooks:
         if "缓冲区" in nb["name"]:
-            return nb["id"], "未分类"
-    # 第一个可用
+            return nb["id"], subdir_hint or "未分类"
+
+    # 3. 第一个可用
     if notebooks:
-        return notebooks[0]["id"], "未分类"
+        return notebooks[0]["id"], subdir_hint or "未分类"
     return None, None
 
 def create_note(meta,nb_id,sub_name):

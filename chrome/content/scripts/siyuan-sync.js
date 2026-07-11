@@ -1,37 +1,10 @@
 "use strict";
 
-// Zotero SiYuan Sync — 主逻辑
+// Zotero SiYuan Sync — 主逻辑（零硬编码，完全可扩展）
 
 Zotero.SiYuanSync = Zotero.SiYuanSync || {};
 
 Object.assign(Zotero.SiYuanSync, {
-  // 笔记本映射（与 siyuan_import.py 的 NOTEBOOK_MAP 保持一致）
-  DIRECTORIES: [
-    ["M4", "📐 M4 电磁场重建与反演"],
-    ["M1", "📐 M1 近场探头"],
-    ["M2", "📐 M2 电流测量"],
-    ["M3", "📐 M3 信号处理"],
-    ["M5", "📐 M5 标定"],
-    ["E1", "⚡ E1 传导干扰"],
-    ["E2", "⚡ E2 辐射干扰"],
-    ["E3", "⚡ E3 干扰源"],
-    ["E4", "⚡ E4 防护"],
-    ["E5", "⚡ E5 标准"],
-    ["P1", "🔌 P1 电力电子"],
-    ["P2", "🔌 P2 电能质量"],
-    ["P3", "🔌 P3 变换器"],
-    ["P4", "🔌 P4 逆变器"],
-    ["P5", "🔌 P5 电机"],
-    ["L1", "💥 L1 脉冲功率"],
-    ["L2", "💥 L2 等离子体"],
-    ["A1", "📡 A1 天线"],
-    ["A2", "📡 A2 传播"],
-    ["C1", "🔧 C1 电路"],
-    ["C2", "🔧 C2 系统"],
-    ["S1", "📊 S1 信号与成像"],
-    ["H1", "🔺 H1 高电压"],
-  ],
-
   hooks: {
     async onStartup() {
       Zotero.log("SiYuanSync: onStartup begin");
@@ -129,24 +102,25 @@ Object.assign(Zotero.SiYuanSync, {
     }
   },
 
-  // 获取或选择笔记本目录
+  // 获取目标目录（用户可自由输入，如 "M4"、"2024 Papers" 等）
   async getDir() {
     var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
     if (dir) return dir;
 
-    var labels = this.DIRECTORIES.map(d => d[1]);
-    var idx = { value: 0 };
-    var ok = Services.prompt.select(
+    // 弹出一个简单的文本输入框
+    var input = { value: "" };
+    var ok = Services.prompt.prompt(
       null,
-      "选择目标笔记本",
-      "导入到哪个子方向？",
-      labels,
-      idx
+      "设置 SiYuan 目标目录",
+      "输入 SiYuan 中的笔记本名或子目录名\n（例如：M4、2024 Papers、缓冲区）\n可后期在插件偏好中修改",
+      input,
+      null,
+      { }
     );
-    if (!ok || idx.value < 0 || idx.value >= this.DIRECTORIES.length) return null;
-    dir = this.DIRECTORIES[idx.value][0];
+    if (!ok || !input.value.trim()) return null;
+    dir = input.value.trim();
     Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir, true);
-    Zotero.log("SiYuanSync: 选择目录: " + dir + " (" + this.DIRECTORIES[idx.value][1] + ")");
+    Zotero.log("SiYuanSync: 目标目录: " + dir);
     return dir;
   },
 
@@ -159,14 +133,12 @@ Object.assign(Zotero.SiYuanSync, {
       return;
     }
 
-    // 获取目标目录
     var dir = await this.getDir();
     if (!dir) {
-      Zotero.log("SiYuanSync: ❌ 未选择目录");
+      Zotero.log("SiYuanSync: ❌ 未设置目录");
       return;
     }
 
-    // 逐篇导入
     var pw = new Zotero.ProgressWindow({closeOnClick:true});
     pw.changeHeadline("📖 导入到 " + dir);
     pw.show();
