@@ -13,6 +13,8 @@ with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
                 continue
             if fname.endswith((".py", ".bat", ".md", ".xpi")):
                 continue
+            if fname in (".gitignore", "updates.json"):
+                continue
             z.write(full, relf)
 with open(xpi, "wb") as f:
     f.write(buf.getvalue())
