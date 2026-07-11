@@ -6,8 +6,19 @@ from datetime import datetime
 
 API="http://127.0.0.1:6806"
 PROXY="http://127.0.0.1:10809"
-# DeepSeek API Key：优先用环境变量，其次用脚本中内置的
-DS_KEY=os.environ.get("DEEPSEEK_API_KEY") or "sk-89881757f3c044929e38c53b4249b115"
+
+# ── DeepSeek API 配置 ──────────────────────────
+# 方式一（推荐）：设置环境变量 DEEPSEEK_API_KEY
+#   Windows: set DEEPSEEK_API_KEY=sk-xxx
+#   Linux/Mac: export DEEPSEEK_API_KEY=sk-xxx
+# 方式二：取消下面这行的注释，填入你的 key
+DS_KEY=os.environ.get("DEEPSEEK_API_KEY")
+if not DS_KEY:
+    print("❌ 请设置 DEEPSEEK_API_KEY 环境变量")
+    print("   Windows: set DEEPSEEK_API_KEY=sk-你的key")
+    print("   或编辑本脚本，取消 DS_KEY 的注释")
+    sys.exit(1)
+# DS_KEY = "sk-你的key"  # ← 取消注释并填入你的 key
 DS_MODEL="deepseek-chat"
 
 def req(d,p):

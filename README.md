@@ -38,6 +38,31 @@ python build_xpi.py
 
 ## 🚀 使用
 
+### ⚙️ 配置 DeepSeek API
+
+插件需要 DeepSeek API Key 进行 AI 分析。
+
+**方式一（推荐）：设置环境变量**
+
+```bash
+# Windows 命令提示符
+set DEEPSEEK_API_KEY=sk-你的key
+
+# Windows PowerShell
+$env:DEEPSEEK_API_KEY="sk-你的key"
+
+# Windows 永久设置
+setx DEEPSEEK_API_KEY sk-你的key
+```
+
+**方式二：编辑 `siyuan_import.py`**
+
+打开 `siyuan_import.py`，取消第 19 行的注释并填入 key：
+
+```python
+DS_KEY = "sk-你的key"  # ← 取消注释并填入你的 key
+```
+
 ### 前置条件
 
 - ✅ Zotero ≥ **9.0.3**
