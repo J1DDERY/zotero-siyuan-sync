@@ -1,7 +1,8 @@
 # 构建产物
 *.xpi
 *.zip
-build_xpi.py
+
+# 注意：build_xpi.py 应提交到仓库（用于其他人构建）
 
 # Python 缓存
 __pycache__/
