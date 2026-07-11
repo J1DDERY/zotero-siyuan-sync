@@ -103,14 +103,32 @@ Object.assign(Zotero.SiYuanSync, {
   async getDir() {
     var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
     if (dir) { Zotero.log("SiYuanSync: 目录: " + dir); return dir; }
-    var input = { value: "" };
-    var ok = Services.prompt.prompt(null, "SiYuan 目标目录",
-      "输入 SiYuan 笔记本名或目录名\n（例如：M4、2024 Papers、缓冲区）\n可在插件偏好中修改",
-      input, null, {});
-    if (!ok || !input.value.trim()) return null;
-    dir = input.value.trim();
-    Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
-    return dir;
+    // 查询 SiYuan 笔记本列表让用户选择
+    try {
+      var ret = await this._siyuanAPI("/api/notebook/lsNotebooks", {});
+      var notebooks = ret.data.notebooks;
+      if (!notebooks || !notebooks.length) throw new Error("无笔记本");
+      var labels = notebooks.map(n => n.name);
+      var idx = { value: 0 };
+      var ok = Services.prompt.select(null, "选择 SiYuan 笔记本",
+        "导入到哪个笔记本？", labels, idx);
+      if (!ok || idx.value < 0) return null;
+      dir = notebooks[idx.value].id;
+      Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
+      Zotero.log("SiYuanSync: 目录: " + notebooks[idx.value].name + " (" + dir + ")");
+      return dir;
+    } catch (e) {
+      Zotero.log("SiYuanSync: 获取笔记本列表失败: " + e.message);
+      // 降级：手动输入
+      var input = { value: "" };
+      var ok = Services.prompt.prompt(null, "SiYuan 笔记本 ID",
+        "无法获取笔记本列表，请手动输入笔记本 ID\n（可在 SiYuan → 设置 → 关于 中查看）",
+        input, null, {});
+      if (!ok || !input.value.trim()) return null;
+      dir = input.value.trim();
+      Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
+      return dir;
+    }
   },
 
   // ── HTTP 工具 ──────────────────────────
@@ -157,19 +175,18 @@ Object.assign(Zotero.SiYuanSync, {
 
   // ── SiYuan 操作 ──────────────────────────
 
-  async _findNotebook(hint) {
+  async _findNotebook(nbId) {
     var ret = await this._siyuanAPI("/api/notebook/lsNotebooks", {});
     var notebooks = ret.data.notebooks;
-    if (hint) {
-      var hl = hint.toLowerCase();
-      for (let nb of notebooks) {
-        if (nb.name.toLowerCase().includes(hl)) return { id: nb.id, name: hint };
-      }
-    }
+    // 直接用保存的笔记本 ID 查找
     for (let nb of notebooks) {
-      if (nb.name.includes("缓冲区")) return { id: nb.id, name: hint || "未分类" };
+      if (nb.id === nbId) return { id: nb.id, name: nb.name };
     }
-    if (notebooks.length) return { id: notebooks[0].id, name: hint || "未分类" };
+    // 降级：模糊匹配
+    for (let nb of notebooks) {
+      if (nb.name.includes("缓冲区")) return { id: nb.id, name: nb.name };
+    }
+    if (notebooks.length) return { id: notebooks[0].id, name: notebooks[0].name };
     throw new Error("SiYuan 中无可用笔记本");
   },
 
@@ -242,13 +259,14 @@ ${analysis.limitations || "(待补充)"}
 
   _parseLLM(text) {
     var result = { motivation: "", content: "", limitations: "" };
-    // 用正则分三段解析
     var keys = ["研究动机/背景", "核心内容", "局限与展望"];
     var pat = new RegExp("(" + keys.join("|") + ")(?:（[^）]*）)?:\\s*", "g");
     var parts = text.split(pat);
     for (var i = 1; i < parts.length - 1; i += 2) {
       var key = parts[i].replace(/（[^）]*）/g, "");
       var val = (parts[i + 1] || "").trim();
+      // 去除 Markdown 粗体标记
+      val = val.replace(/\*\*/g, "");
       if (key === "研究动机/背景") result.motivation = val;
       else if (key === "核心内容") result.content = val;
       else if (key === "局限与展望") result.limitations = val;
