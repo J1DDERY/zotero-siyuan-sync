@@ -160,8 +160,10 @@ Object.assign(Zotero.SiYuanSync, {
       var pr = Components.classes["@mozilla.org/process/util;1"].createInstance(Components.interfaces.nsIProcess);
       pr.init(py);
       pr.run(true, ["D:\\0_DAT\\SiYuan\\scripts\\siyuan_import.py", tmp, "--dir", "M4"], 4);
+      pw.startCloseTimer(500);
       Zotero.log("SiYuanSync: ✅ 导入完成: " + doi);
     } catch (e) {
+      pw.startCloseTimer(500);
       Zotero.log("SiYuanSync: ❌ 导入失败: " + e.message);
     }
   },
