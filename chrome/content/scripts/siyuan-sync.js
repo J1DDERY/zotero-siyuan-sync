@@ -31,6 +31,7 @@ Object.assign(Zotero.SiYuanSync, {
 
   addToWindow(win) {
     var doc = win.document, added = false;
+    // 右键菜单
     var menu = doc.getElementById("zotero-itemmenu");
     if (menu) {
       try {
@@ -39,7 +40,23 @@ Object.assign(Zotero.SiYuanSync, {
         mi.setAttribute("label", "发送到 SiYuan 精读笔记");
         mi.addEventListener("command", () => Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message)));
         menu.appendChild(mi);
-        this.addedIDs.push(mi.id); added = true;
+        this.addedIDs.push(mi.id);
+
+        // 分隔线
+        var sep = doc.createXULElement("menuseparator");
+        sep.id = "siyuan-sync-sep";
+        menu.appendChild(sep);
+        this.addedIDs.push(sep.id);
+
+        // 设置菜单
+        var settings = doc.createXULElement("menuitem");
+        settings.id = "siyuan-sync-settings";
+        settings.setAttribute("label", "⚙ SiYuan 设置…");
+        settings.addEventListener("command", () => Zotero.SiYuanSync.showSettings());
+        menu.appendChild(settings);
+        this.addedIDs.push(settings.id);
+
+        added = true;
       } catch (e) { Zotero.log("SiYuanSync: 菜单失败: " + e.message); }
     }
     var tb = doc.getElementById("zotero-toolbar-item-tree");
@@ -313,5 +330,29 @@ ${analysis.limitations || "(待补充)"}
     pw.changeHeadline("✅ 完成: " + success + "/" + total);
     pw.startCloseTimer(3000);
     Zotero.log("SiYuanSync: ✅ " + success + "/" + total);
+  },
+
+  showSettings() {
+    var choice = { value: 0 };
+    var items = ["重新设置 SiYuan 目录", "重新设置 API Key", "查看当前配置"];
+    var ok = Services.prompt.select(null, "SiYuan Sync 设置",
+      "选择要修改的配置：", items, choice);
+    if (!ok) return;
+
+    if (choice.value === 0) {
+      Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", "");
+      Zotero.log("SiYuanSync: 目录已清空");
+      (async () => { await Zotero.SiYuanSync.getDir(); })();
+    } else if (choice.value === 1) {
+      Zotero.Prefs.set("extensions.zotero-siyuan-sync.apikey", "");
+      Zotero.log("SiYuanSync: API Key 已清空");
+      (async () => { await Zotero.SiYuanSync.getApiKey(); })();
+    } else {
+      var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir") || "（未设置）";
+      var key = Zotero.Prefs.get("extensions.zotero-siyuan-sync.apikey");
+      var kshow = key ? key.slice(0, 8) + "…" : "（未设置）";
+      Services.prompt.alert(null, "当前配置",
+        "目录: " + dir + "\nAPI Key: " + kshow);
+    }
   },
 });
