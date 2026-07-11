@@ -154,13 +154,13 @@ Object.assign(Zotero.SiYuanSync, {
       s.write(jsonStr, jsonStr.length);
       s.close();
 
-      // 调用 Python
+      // 调用 Python（阻塞模式，等待完成）
       var py = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsIFile);
       py.initWithPath("C:\\Users\\dell\\AppData\\Local\\Programs\\Python\\Python312\\python.exe");
       var pr = Components.classes["@mozilla.org/process/util;1"].createInstance(Components.interfaces.nsIProcess);
       pr.init(py);
-      pr.run(false, ["D:\\0_DAT\\SiYuan\\scripts\\siyuan_import.py", tmp, "--dir", "M4"], 4);
-      Zotero.log("SiYuanSync: ✅ 已触发导入: " + doi);
+      pr.run(true, ["D:\\0_DAT\\SiYuan\\scripts\\siyuan_import.py", tmp, "--dir", "M4"], 4);
+      Zotero.log("SiYuanSync: ✅ 导入完成: " + doi);
     } catch (e) {
       Zotero.log("SiYuanSync: ❌ 导入失败: " + e.message);
     }
