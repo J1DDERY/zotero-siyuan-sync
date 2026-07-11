@@ -32,12 +32,10 @@ def llm_analyze(title,abstract,authors,journal):
 期刊: {journal}
 摘要: {abstract[:800] if abstract else '无'}
 
-用中文按以下格式逐项回答，每项2-4句话：
+用中文按以下 3 个方面回答，每项 2-4 句话，**各项之间不要重复**：
 
-研究动机: 
-方法与技术路线: 
-关键创新点: 
-关键结果: （列出具体数值）
+研究动机/背景: 
+核心内容（方法、创新点、关键结果）: 
 局限与展望: """
     data=json.dumps({"model":DS_MODEL,
         "messages":[{"role":"user","content":prompt}],
@@ -48,12 +46,12 @@ def llm_analyze(title,abstract,authors,journal):
             headers=ds_headers),timeout=60).read())
         text=r["choices"][0]["message"]["content"]
         parts={}
-        for key in ["研究动机","方法与技术路线","关键创新点","关键结果","局限与展望"]:
-            m=re.search(rf'{re.escape(key)}:\s*(.*?)(?=\n\n(?:研究动机|方法与技术路线|关键创新点|关键结果|局限与展望)|$)',text,re.DOTALL)
+        for key in ["研究动机/背景","核心内容","局限与展望"]:
+            m=re.search(rf'{re.escape(key)}:\s*(.*?)(?=\n\n(?:研究动机/背景|核心内容|局限与展望)|$)',text,re.DOTALL)
             parts[key]=m.group(1).strip() if m else "(待补充)"
         return parts
     except Exception as e:
-        return {k:f"（LLM 分析失败: {e}）" for k in ["研究动机","方法与技术路线","关键创新点","关键结果","局限与展望"]}
+        return {k:f"（LLM 分析失败: {e}）" for k in ["研究动机/背景","核心内容","局限与展望"]}
 
 def find_notebook(subdir_hint=""):
     """查找 SiYuan 笔记本"""
@@ -128,29 +126,19 @@ def create_note(meta,nb_id,sub_name):
 | **DOI** | [{doi}](https://doi.org/{doi}) |
 | **Zotero** | [{key}]({url or '#'}) |
 
----
-
-## 🎯 研究动机
-
-{analysis.get('研究动机','(待补充)')}
+> ⚠️ **以下 AI 分析仅基于摘要（Abstract），未阅读全文。** 结果可能存在偏差，精读全文后请修正。
 
 ---
 
-## 🔧 方法与技术路线
+## 🎯 研究动机与背景
 
-{analysis.get('方法与技术路线','(待补充)')}
-
----
-
-## ✨ 关键创新点
-
-{analysis.get('关键创新点','(待补充)')}
+{analysis.get('研究动机/背景','(待补充)')}
 
 ---
 
-## 📊 关键结果
+## 🔬 核心内容
 
-{analysis.get('关键结果','(待补充)')}
+{analysis.get('核心内容','(待补充)')}
 
 ---
 
