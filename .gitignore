@@ -13,6 +13,7 @@ __pycache__/
 # 临时文件
 _tmp_*.json
 *.tmp
+*.env
 
 # 编辑器
 .vscode/

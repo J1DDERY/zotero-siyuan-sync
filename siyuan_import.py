@@ -8,12 +8,19 @@ API="http://127.0.0.1:6806"
 PROXY="http://127.0.0.1:10809"
 
 # ── DeepSeek API 配置 ──────────────────────────
+# 优先级：环境变量 > .env 文件 > 手动填入
 DS_KEY=os.environ.get("DEEPSEEK_API_KEY")
 if not DS_KEY:
-    print("❌ 请设置 DEEPSEEK_API_KEY 环境变量")
-    print("   Windows: set DEEPSEEK_API_KEY=sk-你的key")
-    sys.exit(1)
-# DS_KEY = "sk-你的key"  # ← 取消注释并填入 key
+    env_path=os.path.join(os.path.dirname(__file__),"siyuan.env")
+    if os.path.exists(env_path):
+        for line in open(env_path):
+            if line.startswith("DEEPSEEK_API_KEY="):
+                DS_KEY=line.strip().split("=",1)[1]
+    if not DS_KEY:
+        print("❌ 请设置 DEEPSEEK_API_KEY")
+        print("   set DEEPSEEK_API_KEY=sk-你的key")
+        print("   或编辑 siyuan.env 填入 key")
+        sys.exit(1)
 DS_MODEL="deepseek-chat"
 
 proxy=urllib.request.ProxyHandler({"http":PROXY,"https":PROXY})
