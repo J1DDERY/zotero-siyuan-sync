@@ -71,27 +71,28 @@ Object.assign(Zotero.SiYuanSync, {
 
   async getApiKey() {
     var key = Zotero.Prefs.get("extensions.zotero-siyuan-sync.apikey");
-    if (key) return key;
+    if (key) { Zotero.log("SiYuanSync: API Key 已保存"); return key; }
     var input = { value: "" };
     var ok = Services.prompt.prompt(null, "DeepSeek API Key",
       "输入你的 DeepSeek API Key\n（以 sk- 开头，仅保存到 Zotero 本地配置）",
       input, null, {});
     if (!ok || !input.value.trim()) return null;
     key = input.value.trim();
-    Zotero.Prefs.set("extensions.zotero-siyuan-sync.apikey", key, true);
+    Zotero.Prefs.set("extensions.zotero-siyuan-sync.apikey", key);
+    Zotero.log("SiYuanSync: API Key 已保存");
     return key;
   },
 
   async getDir() {
     var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
-    if (dir) return dir;
+    if (dir) { Zotero.log("SiYuanSync: 目录: " + dir); return dir; }
     var input = { value: "" };
     var ok = Services.prompt.prompt(null, "SiYuan 目标目录",
       "输入 SiYuan 笔记本名或目录名\n（例如：M4、2024 Papers、缓冲区）\n可在插件偏好中修改",
       input, null, {});
     if (!ok || !input.value.trim()) return null;
     dir = input.value.trim();
-    Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir, true);
+    Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
     return dir;
   },
 
