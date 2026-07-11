@@ -214,7 +214,7 @@ Object.assign(Zotero.SiYuanSync, {
         py.initWithPath("C:\\Users\\dell\\AppData\\Local\\Programs\\Python\\Python312\\python.exe");
         var pr = Components.classes["@mozilla.org/process/util;1"].createInstance(Components.interfaces.nsIProcess);
         pr.init(py);
-        pr.run(true, ["D:\\0_DAT\\SiYuan\\scripts\\siyuan_import.py", tmp, "--dir", dir], 4 + dir.length);
+        pr.run(true, ["D:\\0_DAT\\SiYuan\\scripts\\siyuan_import.py", tmp, "--dir", dir], 4);
         success++;
         Zotero.log("SiYuanSync: ✅ " + doi);
       } catch (e) {
