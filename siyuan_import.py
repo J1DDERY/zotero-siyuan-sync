@@ -53,9 +53,16 @@ def llm_analyze(title,abstract,authors,journal):
             headers=ds_headers),timeout=60).read())
         text=r["choices"][0]["message"]["content"]
         parts={}
-        for key in ["研究动机/背景","核心内容","局限与展望"]:
-            m=re.search(rf'{re.escape(key)}:\s*(.*?)(?=\n\n(?:研究动机/背景|核心内容|局限与展望)|$)',text,re.DOTALL)
-            parts[key]=m.group(1).strip() if m else "(待补充)"
+        keys=["研究动机/背景","核心内容","局限与展望"]
+        # 按 key: 分割
+        import re as _re
+        pat=r'('+'|'.join(re.escape(k) for k in keys)+r')(?:（[^）]*）)?:\s*'
+        segs=_re.split(pat,text)
+        for i in range(1,len(segs)-1,2):
+            k=_re.sub(r'（[^）]*）','',segs[i])
+            parts[k]=segs[i+1].strip()
+        for k in keys:
+            if k not in parts:parts[k]="(待补充)"
         return parts
     except Exception as e:
         return {k:f"（LLM 分析失败: {e}）" for k in ["研究动机/背景","核心内容","局限与展望"]}
