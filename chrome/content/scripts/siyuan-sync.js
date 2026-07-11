@@ -78,7 +78,9 @@ Object.assign(Zotero.SiYuanSync, {
         var mi = doc.createXULElement("menuitem");
         mi.id = "siyuan-sync-menuitem";
         mi.setAttribute("label", "发送到 SiYuan 精读笔记");
-        mi.addEventListener("command", () => Zotero.SiYuanSync.onSync(win));
+        mi.addEventListener("command", () => {
+          Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message));
+        });
         menu.appendChild(mi);
         this.addedIDs.push(mi.id);
         added = true;
@@ -96,7 +98,9 @@ Object.assign(Zotero.SiYuanSync, {
         btn.setAttribute("class", "zotero-tb-button");
         btn.setAttribute("label", "精读");
         btn.setAttribute("tooltiptext", "发送到 SiYuan 精读笔记");
-        btn.addEventListener("command", () => Zotero.SiYuanSync.onSync(win));
+        btn.addEventListener("command", () => {
+          Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message));
+        });
         tb.insertBefore(btn, tb.firstElementChild);
         this.addedIDs.push(btn.id);
         added = true;
