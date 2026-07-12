@@ -79,7 +79,7 @@ Object.assign(Zotero.SiYuanSync, {
         Zotero.log("SiYuanSync: ✅ UI 已添加");
       } else {
         Zotero.log("SiYuanSync: ⏳ 待重试 (" + (retryCount+1) + "/10)...");
-        win.setTimeout(() => Zotero.SiYuanSync.addToWindow(win, retryCount + 1), 1000);
+        setTimeout(function() { Zotero.SiYuanSync.addToWindow(win, retryCount + 1); }, 1000);
       }
     },
 
@@ -143,7 +143,8 @@ Object.assign(Zotero.SiYuanSync, {
       var subPath = "";
       try {
         var tree = await this._siyuanAPI("/api/filetree/getTree", { id: nbInfo.id });
-        var folders = this._flattenTree(tree.data || tree.boxes || []);
+        var root = tree.data || {};
+        var folders = this._flattenTree(root);
         if (folders.length) {
           var fLabels = folders.map(f => f.name);
           var fIdx = { value: 0 };
@@ -174,12 +175,19 @@ Object.assign(Zotero.SiYuanSync, {
     }
   },
 
-  _flattenTree(items) {
+  _flattenTree(tree) {
     var result = [];
-    for (let item of items) {
-      if (item.name && item.id) result.push(item);
-      if (item.children) result = result.concat(this._flattenTree(item.children));
+    // tree 是根节点对象，含 children
+    function walk(box) {
+      if (!box || !box.children) return;
+      for (let child of box.children) {
+        if (child.subType === "d" || child.type === "d") {
+          if (child.name && child.id) result.push(child);
+          if (child.children) walk(child);
+        }
+      }
     }
+    walk(tree);
     return result;
   },
 
