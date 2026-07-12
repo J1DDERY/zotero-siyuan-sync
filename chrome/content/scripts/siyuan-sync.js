@@ -100,32 +100,42 @@ Object.assign(Zotero.SiYuanSync, {
     return key;
   },
 
-  async getDir() {
-    var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
-    if (dir) { Zotero.log("SiYuanSync: 目录: " + dir); return dir; }
-    // 查询 SiYuan 笔记本列表让用户选择
+  async getDir(forceRefresh) {
+    var oldId = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
     try {
       var ret = await this._siyuanAPI("/api/notebook/lsNotebooks", {});
       var notebooks = ret.data.notebooks;
       if (!notebooks || !notebooks.length) throw new Error("无笔记本");
+      // 快速路径：旧 ID 仍有效 → 直接返回
+      if (oldId && !forceRefresh) {
+        for (let nb of notebooks) {
+          if (nb.id === oldId) { Zotero.log("SiYuanSync: 目录: " + nb.name); return oldId; }
+        }
+      }
+      // 慢路径：弹窗让用户选择
       var labels = notebooks.map(n => n.name);
-      var idx = { value: 0 };
+      var defaultIdx = 0;
+      if (oldId) {
+        for (let i = 0; i < notebooks.length; i++) {
+          if (notebooks[i].id === oldId) { defaultIdx = i; break; }
+        }
+      }
+      var idx = { value: defaultIdx };
       var ok = Services.prompt.select(null, "选择 SiYuan 笔记本",
         "导入到哪个笔记本？", labels, idx);
-      if (!ok || idx.value < 0) return null;
-      dir = notebooks[idx.value].id;
+      if (!ok || idx.value < 0 || idx.value >= notebooks.length) return oldId || null;
+      var dir = notebooks[idx.value].id;
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
       Zotero.log("SiYuanSync: 目录: " + notebooks[idx.value].name + " (" + dir + ")");
       return dir;
     } catch (e) {
       Zotero.log("SiYuanSync: 获取笔记本列表失败: " + e.message);
-      // 降级：手动输入
+      if (oldId) return oldId;
       var input = { value: "" };
       var ok = Services.prompt.prompt(null, "SiYuan 笔记本 ID",
-        "无法获取笔记本列表，请手动输入笔记本 ID\n（可在 SiYuan → 设置 → 关于 中查看）",
-        input, null, {});
+        "无法获取笔记本列表，请手动输入笔记本 ID", input, null, {});
       if (!ok || !input.value.trim()) return null;
-      dir = input.value.trim();
+      var dir = input.value.trim();
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
       return dir;
     }
@@ -371,7 +381,7 @@ ${analysis.limitations || "(待补充)"}
     if (choice.value === 0) {
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", "");
       Zotero.log("SiYuanSync: 目录已清空");
-      (async () => { await Zotero.SiYuanSync.getDir(); })();
+      (async () => { await Zotero.SiYuanSync.getDir(true); })();
     } else if (choice.value === 1) {
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.apikey", "");
       Zotero.log("SiYuanSync: API Key 已清空");
