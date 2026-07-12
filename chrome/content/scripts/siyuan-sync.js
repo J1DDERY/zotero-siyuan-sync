@@ -29,51 +29,59 @@ Object.assign(Zotero.SiYuanSync, {
     for (let win of wins) { if (win.ZoteroPane) this.addToWindow(win); }
   },
 
-  addToWindow(win) {
-    var doc = win.document, added = false;
-    // 右键菜单
-    var menu = doc.getElementById("zotero-itemmenu");
-    if (menu) {
-      try {
-        var mi = doc.createXULElement("menuitem");
-        mi.id = "siyuan-sync-menuitem";
-        mi.setAttribute("label", "发送到 SiYuan 精读笔记");
-        mi.addEventListener("command", () => Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message)));
-        menu.appendChild(mi);
-        this.addedIDs.push(mi.id);
+  addToWindow(win, retryCount) {
+      if (retryCount === undefined) retryCount = 0;
+      if (retryCount > 10) { Zotero.log("SiYuanSync: 重试次数耗尽"); return; }
+      // 避免重复添加
+      if (win.document.getElementById("siyuan-sync-menuitem")) return;
 
-        // 分隔线
-        var sep = doc.createXULElement("menuseparator");
-        sep.id = "siyuan-sync-sep";
-        menu.appendChild(sep);
-        this.addedIDs.push(sep.id);
+      var doc = win.document, added = false;
+      // 右键菜单
+      var menu = doc.getElementById("zotero-itemmenu");
+      if (menu) {
+        try {
+          var mi = doc.createXULElement("menuitem");
+          mi.id = "siyuan-sync-menuitem";
+          mi.setAttribute("label", "发送到 SiYuan 精读笔记");
+          mi.addEventListener("command", () => Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message)));
+          menu.appendChild(mi);
+          this.addedIDs.push(mi.id);
 
-        // 设置菜单
-        var settings = doc.createXULElement("menuitem");
-        settings.id = "siyuan-sync-settings";
-        settings.setAttribute("label", "⚙ SiYuan 设置…");
-        settings.addEventListener("command", () => Zotero.SiYuanSync.showSettings());
-        menu.appendChild(settings);
-        this.addedIDs.push(settings.id);
+          var sep = doc.createXULElement("menuseparator");
+          sep.id = "siyuan-sync-sep";
+          menu.appendChild(sep);
+          this.addedIDs.push(sep.id);
 
-        added = true;
-      } catch (e) { Zotero.log("SiYuanSync: 菜单失败: " + e.message); }
-    }
-    var tb = doc.getElementById("zotero-toolbar-item-tree");
-    if (tb) {
-      try {
-        var btn = doc.createXULElement("toolbarbutton");
-        btn.id = "siyuan-sync-btn";
-        btn.setAttribute("class", "zotero-tb-button");
-        btn.setAttribute("label", "精读");
-        btn.setAttribute("tooltiptext", "发送到 SiYuan 精读笔记");
-        btn.addEventListener("command", () => Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message)));
-        tb.insertBefore(btn, tb.firstElementChild);
-        this.addedIDs.push(btn.id); added = true;
-      } catch (e) { Zotero.log("SiYuanSync: 工具栏失败: " + e.message); }
-    }
-    if (!added) Zotero.log("SiYuanSync: ⚠️ 未能添加 UI");
-  },
+          var settings = doc.createXULElement("menuitem");
+          settings.id = "siyuan-sync-settings";
+          settings.setAttribute("label", "⚙ SiYuan 设置…");
+          settings.addEventListener("command", () => Zotero.SiYuanSync.showSettings());
+          menu.appendChild(settings);
+          this.addedIDs.push(settings.id);
+
+          added = true;
+        } catch (e) { Zotero.log("SiYuanSync: 菜单失败: " + e.message); }
+      }
+      var tb = doc.getElementById("zotero-toolbar-item-tree");
+      if (tb) {
+        try {
+          var btn = doc.createXULElement("toolbarbutton");
+          btn.id = "siyuan-sync-btn";
+          btn.setAttribute("class", "zotero-tb-button");
+          btn.setAttribute("label", "精读");
+          btn.setAttribute("tooltiptext", "发送到 SiYuan 精读笔记");
+          btn.addEventListener("command", () => Zotero.SiYuanSync.onSync(win).catch(e => Zotero.log("SiYuanSync: ❌ " + e.message)));
+          tb.insertBefore(btn, tb.firstElementChild);
+          this.addedIDs.push(btn.id); added = true;
+        } catch (e) { Zotero.log("SiYuanSync: 工具栏失败: " + e.message); }
+      }
+      if (added) {
+        Zotero.log("SiYuanSync: ✅ UI 已添加");
+      } else {
+        Zotero.log("SiYuanSync: ⏳ 待重试 (" + (retryCount+1) + "/10)...");
+        win.setTimeout(() => Zotero.SiYuanSync.addToWindow(win, retryCount + 1), 1000);
+      }
+    },
 
   removeFromWindow(win) {
     var doc = win.document;
