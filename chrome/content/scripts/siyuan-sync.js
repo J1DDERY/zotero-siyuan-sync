@@ -139,23 +139,14 @@ Object.assign(Zotero.SiYuanSync, {
       if (!ok || idx.value < 0 || idx.value >= notebooks.length) return oldVal || null;
       var nbInfo = notebooks[idx.value];
 
-      // 查询笔记本内的子文件夹
+      // 查询笔记本内的子文件夹（手动输入）
       var subPath = "";
-      try {
-        var tree = await this._siyuanAPI("/api/filetree/getTree", { id: nbInfo.id });
-        var root = tree.data || {};
-        var folders = this._flattenTree(root);
-        if (folders.length) {
-          var fLabels = folders.map(f => f.name);
-          var fIdx = { value: 0 };
-          var fOk = Services.prompt.select(null, "选择子文件夹",
-            "选择导入到哪个子文件夹\n（或取消 → 根目录/精读文献）", fLabels, fIdx);
-          if (fOk && fIdx.value >= 0) {
-            subPath = "/" + folders[fIdx.value].name;
-          }
-        }
-      } catch (e) {
-        Zotero.log("SiYuanSync: 获取文件树失败: " + e.message);
+      var input = { value: "" };
+      var inputOk = Services.prompt.prompt(null, "目标子文件夹",
+        "输入目标子文件夹名\n（留空则放在根目录 /精读文献 下）\n例如: M4、M4 电磁场重建与反演",
+        input, null, {});
+      if (inputOk && input.value.trim()) {
+        subPath = "/" + input.value.trim();
       }
 
       var dir = nbInfo.id + "|" + subPath;
