@@ -166,22 +166,6 @@ Object.assign(Zotero.SiYuanSync, {
     }
   },
 
-  _flattenTree(tree) {
-    var result = [];
-    // tree 是根节点对象，含 children
-    function walk(box) {
-      if (!box || !box.children) return;
-      for (let child of box.children) {
-        if (child.subType === "d" || child.type === "d") {
-          if (child.name && child.id) result.push(child);
-          if (child.children) walk(child);
-        }
-      }
-    }
-    walk(tree);
-    return result;
-  },
-
   // ── HTTP 工具 ──────────────────────────
 
   _siyuanAPI(path, data) {
