@@ -185,20 +185,42 @@ Object.assign(Zotero.SiYuanSync, {
   },
 
   _deepseekAPI(prompt, apiKey) {
-    return new Promise((resolve, reject) => {
+    // 优先用 Zotero.HTTP（走系统代理），降级 XMLHttpRequest
+    if (typeof Zotero !== 'undefined' && Zotero.HTTP && Zotero.HTTP.request) {
+      return Zotero.HTTP.request("POST", "https://api.deepseek.com/v1/chat/completions", {
+        headers: {
+          "Authorization": "Bearer " + apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.1,
+          max_tokens: 800
+        }),
+        responseType: "json"
+      }).then(function(response) {
+        return response.response.choices[0].message.content;
+      }).catch(function(e) {
+        throw new Error("DeepSeek API 请求失败: " + (e.message || e));
+      });
+    }
+    // 降级：XMLHttpRequest（不走代理，用于本地访问）
+    return new Promise(function(resolve, reject) {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "https://api.deepseek.com/v1/chat/completions", true);
       xhr.setRequestHeader("Content-Type", "application/json");
       xhr.setRequestHeader("Authorization", "Bearer " + apiKey);
       xhr.timeout = 60000;
-      xhr.onload = () => {
+      xhr.onload = function() {
         try {
           var r = JSON.parse(xhr.responseText);
-          resolve(r.choices[0].message.content);
+          if (r.error) reject(new Error(r.error.message || "认证失败"));
+          else resolve(r.choices[0].message.content);
         } catch(e) { reject(new Error("DeepSeek 响应解析失败")); }
       };
-      xhr.onerror = () => reject(new Error("DeepSeek API 请求失败（检查网络/代理）"));
-      xhr.ontimeout = () => reject(new Error("DeepSeek 超时（60s）"));
+      xhr.onerror = function() { reject(new Error("DeepSeek 连接失败（检查代理/网络）")); };
+      xhr.ontimeout = function() { reject(new Error("DeepSeek 超时（60s）")); };
       xhr.send(JSON.stringify({
         model: "deepseek-chat",
         messages: [{ role: "user", content: prompt }],
