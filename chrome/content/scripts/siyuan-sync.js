@@ -314,14 +314,14 @@ ${analysis.limitations || "(待补充)"}
 
   _parseLLM(text) {
     var result = { motivation: "", content: "", limitations: "" };
+    // 预处理：去除 Markdown 粗体标记，避免 **key:** 匹配不上
+    text = text.replace(/\*\*/g, "");
     var keys = ["研究动机/背景", "核心内容", "局限与展望"];
     var pat = new RegExp("(" + keys.join("|") + ")(?:（[^）]*）)?:\\s*", "g");
     var parts = text.split(pat);
     for (var i = 1; i < parts.length - 1; i += 2) {
       var key = parts[i].replace(/（[^）]*）/g, "");
       var val = (parts[i + 1] || "").trim();
-      // 去除 Markdown 粗体标记
-      val = val.replace(/\*\*/g, "");
       if (key === "研究动机/背景") result.motivation = val;
       else if (key === "核心内容") result.content = val;
       else if (key === "局限与展望") result.limitations = val;
