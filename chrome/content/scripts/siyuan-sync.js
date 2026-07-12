@@ -247,7 +247,7 @@ ${analysis.limitations || "(待补充)"}
 
     var ret = await this._siyuanAPI("/api/filetree/createDocWithMd", {
       notebook: nbInfo.id,
-      path: "/" + safeName,
+      path: "/精读文献/" + safeName,
       title: safeName.slice(0, 80),
       type: "d",
       markdown: md

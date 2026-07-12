@@ -24,3 +24,4 @@ _tmp_*.json
 # 系统
 .DS_Store
 Thumbs.db
+nul
