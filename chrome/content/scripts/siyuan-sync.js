@@ -245,6 +245,17 @@ ${analysis.limitations || "(待补充)"}
 *笔记创建于 ${timeStr}*
 `;
 
+    // 确保精读文献目录存在
+    try {
+      await this._siyuanAPI("/api/filetree/createDocWithMd", {
+        notebook: nbInfo.id,
+        path: "/精读文献",
+        title: "精读文献",
+        type: "d",
+        markdown: ""
+      });
+    } catch (e) { /* 目录已存在则忽略错误 */ }
+
     var ret = await this._siyuanAPI("/api/filetree/createDocWithMd", {
       notebook: nbInfo.id,
       path: "/精读文献/" + safeName,
