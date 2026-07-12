@@ -109,18 +109,23 @@ Object.assign(Zotero.SiYuanSync, {
   },
 
   async getDir(forceRefresh) {
-    var oldId = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
+    var oldVal = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
+    var oldId = "";
+    if (oldVal && oldVal.includes("|")) {
+      var parts = oldVal.split("|");
+      oldId = parts[0];
+    }
     try {
       var ret = await this._siyuanAPI("/api/notebook/lsNotebooks", {});
       var notebooks = ret.data.notebooks;
       if (!notebooks || !notebooks.length) throw new Error("无笔记本");
       // 快速路径：旧 ID 仍有效 → 直接返回
-      if (oldId && !forceRefresh) {
+      if (oldVal && !forceRefresh) {
         for (let nb of notebooks) {
-          if (nb.id === oldId) { Zotero.log("SiYuanSync: 目录: " + nb.name); return oldId; }
+          if (nb.id === oldId) { Zotero.log("SiYuanSync: 笔记本: " + nb.name); return oldVal; }
         }
       }
-      // 慢路径：弹窗让用户选择
+      // 选择笔记本
       var labels = notebooks.map(n => n.name);
       var defaultIdx = 0;
       if (oldId) {
@@ -130,15 +135,35 @@ Object.assign(Zotero.SiYuanSync, {
       }
       var idx = { value: defaultIdx };
       var ok = Services.prompt.select(null, "选择 SiYuan 笔记本",
-        "导入到哪个笔记本？", labels, idx);
-      if (!ok || idx.value < 0 || idx.value >= notebooks.length) return oldId || null;
-      var dir = notebooks[idx.value].id;
+        "选择目标笔记本", labels, idx);
+      if (!ok || idx.value < 0 || idx.value >= notebooks.length) return oldVal || null;
+      var nbInfo = notebooks[idx.value];
+
+      // 查询笔记本内的子文件夹
+      var subPath = "";
+      try {
+        var tree = await this._siyuanAPI("/api/filetree/getTree", { id: nbInfo.id });
+        var folders = this._flattenTree(tree.data || tree.boxes || []);
+        if (folders.length) {
+          var fLabels = folders.map(f => f.name);
+          var fIdx = { value: 0 };
+          var fOk = Services.prompt.select(null, "选择子文件夹",
+            "选择导入到哪个子文件夹\n（或取消 → 根目录/精读文献）", fLabels, fIdx);
+          if (fOk && fIdx.value >= 0) {
+            subPath = "/" + folders[fIdx.value].name;
+          }
+        }
+      } catch (e) {
+        Zotero.log("SiYuanSync: 获取文件树失败: " + e.message);
+      }
+
+      var dir = nbInfo.id + "|" + subPath;
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
-      Zotero.log("SiYuanSync: 目录: " + notebooks[idx.value].name + " (" + dir + ")");
+      Zotero.log("SiYuanSync: 目录: " + nbInfo.name + subPath + " (" + nbInfo.id + ")");
       return dir;
     } catch (e) {
       Zotero.log("SiYuanSync: 获取笔记本列表失败: " + e.message);
-      if (oldId) return oldId;
+      if (oldVal) return oldVal;
       var input = { value: "" };
       var ok = Services.prompt.prompt(null, "SiYuan 笔记本 ID",
         "无法获取笔记本列表，请手动输入笔记本 ID", input, null, {});
@@ -147,6 +172,15 @@ Object.assign(Zotero.SiYuanSync, {
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.dir", dir);
       return dir;
     }
+  },
+
+  _flattenTree(items) {
+    var result = [];
+    for (let item of items) {
+      if (item.name && item.id) result.push(item);
+      if (item.children) result = result.concat(this._flattenTree(item.children));
+    }
+    return result;
   },
 
   // ── HTTP 工具 ──────────────────────────
@@ -193,18 +227,26 @@ Object.assign(Zotero.SiYuanSync, {
 
   // ── SiYuan 操作 ──────────────────────────
 
-  async _findNotebook(nbId) {
+  async _findNotebook(dirVal) {
+    // dirVal 格式: "nbId|/subPath"
+    var nbId = dirVal;
+    var subPath = "";
+    if (dirVal && dirVal.includes("|")) {
+      var parts = dirVal.split("|");
+      nbId = parts[0];
+      subPath = parts[1] || "";
+    }
     var ret = await this._siyuanAPI("/api/notebook/lsNotebooks", {});
     var notebooks = ret.data.notebooks;
     // 直接用保存的笔记本 ID 查找
     for (let nb of notebooks) {
-      if (nb.id === nbId) return { id: nb.id, name: nb.name };
+      if (nb.id === nbId) return { id: nb.id, name: nb.name, subPath: subPath };
     }
     // 降级：模糊匹配
     for (let nb of notebooks) {
-      if (nb.name.includes("缓冲区")) return { id: nb.id, name: nb.name };
+      if (nb.name.includes("缓冲区")) return { id: nb.id, name: nb.name, subPath: "" };
     }
-    if (notebooks.length) return { id: notebooks[0].id, name: notebooks[0].name };
+    if (notebooks.length) return { id: notebooks[0].id, name: notebooks[0].name, subPath: "" };
     throw new Error("SiYuan 中无可用笔记本");
   },
 
@@ -263,11 +305,12 @@ ${analysis.limitations || "(待补充)"}
 *笔记创建于 ${timeStr}*
 `;
 
-    // 确保精读文献目录存在
+    // 确保精读文献目录存在（在子文件夹下）
+    var notePath = nbInfo.subPath ? nbInfo.subPath + "/精读文献" : "/精读文献";
     try {
       await this._siyuanAPI("/api/filetree/createDocWithMd", {
         notebook: nbInfo.id,
-        path: "/精读文献",
+        path: notePath,
         title: "精读文献",
         type: "d",
         markdown: ""
@@ -276,7 +319,7 @@ ${analysis.limitations || "(待补充)"}
 
     var ret = await this._siyuanAPI("/api/filetree/createDocWithMd", {
       notebook: nbInfo.id,
-      path: "/精读文献/" + safeName,
+      path: notePath + "/" + safeName,
       title: safeName.slice(0, 80),
       type: "d",
       markdown: md
