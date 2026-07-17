@@ -108,6 +108,20 @@ Object.assign(Zotero.SiYuanSync, {
     return key;
   },
 
+  async getToken() {
+    var token = Zotero.Prefs.get("extensions.zotero-siyuan-sync.siyuanToken");
+    if (token) { Zotero.log("SiYuanSync: SiYuan Token 已保存"); return token; }
+    var input = { value: "" };
+    var ok = Services.prompt.prompt(null, "SiYuan API Token",
+      "输入 SiYuan API Token\n（SiYuan → 设置 → 关于 → API Token）\n仅保存到 Zotero 本地配置",
+      input, null, {});
+    if (!ok || !input.value.trim()) return null;
+    token = input.value.trim();
+    Zotero.Prefs.set("extensions.zotero-siyuan-sync.siyuanToken", token);
+    Zotero.log("SiYuanSync: SiYuan Token 已保存");
+    return token;
+  },
+
   async getDir(forceRefresh) {
     var oldVal = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir");
     var oldId = "";
@@ -173,6 +187,9 @@ Object.assign(Zotero.SiYuanSync, {
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "http://127.0.0.1:6806" + path, true);
       xhr.setRequestHeader("Content-Type", "application/json");
+      // SiYuan API Token（从用户配置读取）
+      var token = Zotero.Prefs.get("extensions.zotero-siyuan-sync.siyuanToken");
+      if (token) xhr.setRequestHeader("Authorization", "Token " + token);
       xhr.timeout = 15000;
       xhr.onload = () => {
         try { resolve(JSON.parse(xhr.responseText)); }
@@ -335,18 +352,69 @@ ${analysis.limitations || "(待补充)"}
   // ── AI 分析 ──────────────────────────
 
   _parseLLM(text) {
-    var result = { motivation: "", content: "", limitations: "" };
-    // 预处理：去除 Markdown 粗体标记，避免 **key:** 匹配不上
+    var result = { motivation: "(待补充)", content: "(待补充)", limitations: "(待补充)" };
+    if (!text) return result;
+    // 预处理：去除 Markdown 粗体标记
     text = text.replace(/\*\*/g, "");
+    // 行级解析：逐行匹配 key: value
     var keys = ["研究动机/背景", "核心内容", "局限与展望"];
-    var pat = new RegExp("(" + keys.join("|") + ")(?:（[^）]*）)?:\\s*", "g");
-    var parts = text.split(pat);
-    for (var i = 1; i < parts.length - 1; i += 2) {
-      var key = parts[i].replace(/（[^）]*）/g, "");
-      var val = (parts[i + 1] || "").trim();
-      if (key === "研究动机/背景") result.motivation = val;
-      else if (key === "核心内容") result.content = val;
-      else if (key === "局限与展望") result.limitations = val;
+    var currentKey = null, currentVal = [];
+    function flush() {
+      if (currentKey && currentVal.length) {
+        var v = currentVal.join(" ").trim();
+        if (currentKey === "研究动机/背景") result.motivation = v;
+        else if (currentKey === "核心内容") result.content = v;
+        else if (currentKey === "局限与展望") result.limitations = v;
+      }
+      currentKey = null; currentVal = [];
+    }
+    var lines = text.split("\n");
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+      var matched = false;
+      for (var k = 0; k < keys.length; k++) {
+        // 支持: key:  key：  1.key:  **key:**
+        var re = new RegExp("^(?:\\d+\\s*[.、]\\s*)?(?:" + keys[k] + ")(?:（[^）]*）)?\\s*[:：]\\s*(.*?)$", "i");
+        var m = line.match(re);
+        if (!m) {
+          // 也支持: **key**（无冒号，value在下一行）
+          re = new RegExp("^(?:\\d+\\s*[.、]\\s*)?(?:" + keys[k] + ")(?:（[^）]*）)?\\s*$", "i");
+          m = line.match(re);
+        }
+        if (m) {
+          flush();
+          currentKey = keys[k];
+          if (m[1] && m[1].trim()) currentVal.push(m[1].trim());
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && currentKey) currentVal.push(line);
+    }
+    flush();
+    // 全文搜索兜底（仅当字段仍是默认值时触发）
+    var defaults = ["(待补充)", ""];
+    for (var k = 0; k < keys.length; k++) {
+      var key = keys[k];
+      var rKey = key === "研究动机/背景" ? "motivation" : key === "核心内容" ? "content" : "limitations";
+      if (defaults.indexOf(result[rKey]) >= 0 && text.indexOf(key) >= 0) {
+        var idx = text.indexOf(key);
+        var rest = text.substring(idx + key.length).trim();
+        if (rest.charAt(0) === ":" || rest.charAt(0) === "：") rest = rest.substring(1).trim();
+        var nextIdx = rest.length;
+        for (var j = 0; j < keys.length; j++) {
+          if (j === k) continue;
+          var pos = rest.indexOf(keys[j]);
+          if (pos >= 0 && pos < nextIdx) nextIdx = pos;
+        }
+        var content = rest.substring(0, nextIdx).trim();
+        if (content) {
+          if (key === "研究动机/背景") result.motivation = content;
+          else if (key === "核心内容") result.content = content;
+          else if (key === "局限与展望") result.limitations = content;
+        }
+      }
     }
     if (!result.motivation) result.motivation = "(待补充)";
     if (!result.content) result.content = "(待补充)";
@@ -380,6 +448,8 @@ ${analysis.limitations || "(待补充)"}
 
     var apiKey = await this.getApiKey();
     if (!apiKey) { Zotero.log("无 API Key"); return; }
+    var token = await this.getToken();
+    if (!token) { Zotero.log("无 SiYuan Token"); return; }
     var dir = await this.getDir();
     if (!dir) { Zotero.log("无目录"); return; }
 
@@ -429,7 +499,7 @@ ${analysis.limitations || "(待补充)"}
 
   showSettings() {
     var choice = { value: 0 };
-    var items = ["重新设置 SiYuan 目录", "重新设置 API Key", "查看当前配置"];
+    var items = ["重新设置 SiYuan 目录", "重新设置 API Key", "设置 SiYuan Token", "查看当前配置"];
     var ok = Services.prompt.select(null, "SiYuan Sync 设置",
       "选择要修改的配置：", items, choice);
     if (!ok) return;
@@ -442,12 +512,18 @@ ${analysis.limitations || "(待补充)"}
       Zotero.Prefs.set("extensions.zotero-siyuan-sync.apikey", "");
       Zotero.log("SiYuanSync: API Key 已清空");
       (async () => { await Zotero.SiYuanSync.getApiKey(); })();
+    } else if (choice.value === 2) {
+      Zotero.Prefs.set("extensions.zotero-siyuan-sync.siyuanToken", "");
+      Zotero.log("SiYuanSync: SiYuan Token 已清空");
+      (async () => { await Zotero.SiYuanSync.getToken(); })();
     } else {
       var dir = Zotero.Prefs.get("extensions.zotero-siyuan-sync.dir") || "（未设置）";
       var key = Zotero.Prefs.get("extensions.zotero-siyuan-sync.apikey");
       var kshow = key ? key.slice(0, 8) + "…" : "（未设置）";
+      var token = Zotero.Prefs.get("extensions.zotero-siyuan-sync.siyuanToken");
+      var tshow = token ? token.slice(0, 4) + "…" : "（未设置）";
       Services.prompt.alert(null, "当前配置",
-        "目录: " + dir + "\nAPI Key: " + kshow);
+        "目录: " + dir + "\nAPI Key: " + kshow + "\nSiYuan Token: " + tshow);
     }
   },
 });

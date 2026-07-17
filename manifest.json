@@ -9,10 +9,7 @@
     "48": "chrome/content/icons/favicon@0.5x.png",
     "96": "chrome/content/icons/favicon.png"
   },
-  "permissions": [
-    "http://127.0.0.1/*",
-    "https://api.deepseek.com/*"
-  ],
+  "permissions": [],
   "applications": {
     "zotero": {
       "id": "zotero-siyuan-sync@J1DDERY",
